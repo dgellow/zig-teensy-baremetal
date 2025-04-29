@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
 
 env:
-  ZIG_VERSION: 0.15.0
+  ZIG_VERSION: 0.15.0-dev.208+8acedfd5b
 
 jobs:
   formatting-check:
