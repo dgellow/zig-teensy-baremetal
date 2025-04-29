@@ -47,6 +47,12 @@ You can use TyTools to flash the generated IHEX file to the Teensy 4.1 board.
 $ tycmd list
 add 16740150-Teensy Teensy 4.1 (HalfKay)
 $ tycmd upload --board 16740150-Teensy teensy_zig.hex
+upload@16740150-Teensy  Uploading to board '16740150-Teensy' (Teensy 4.1)
+upload@16740150-Teensy  Firmware: teensy_zig.hex
+upload@16740150-Teensy  Flash usage: 6 kiB (0.1%)
+upload@16740150-Teensy  Uploading... 100%
+upload@16740150-Teensy  Sending reset command (with RTC)
+upload@16740150-Teensy  Board '16740150-Teensy' has disappeared
 ```
 
 ---
