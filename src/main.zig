@@ -1,6 +1,10 @@
 const chip = @import("imxrt1062.zig");
 const peripherals = chip.devices.MIMXRT1062.peripherals;
 
+const c = @cImport({
+    @cInclude("usb_serial.h");
+});
+
 pub export fn main() void {
     // Configure B0_03 (PIN #13) for output
     peripherals.IOMUXC.SW_MUX_CTL_PAD_GPIO_B0_03.modify(.{

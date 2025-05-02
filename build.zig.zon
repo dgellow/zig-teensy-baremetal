@@ -37,7 +37,10 @@
     // internet connectivity.
     .dependencies = .{
         .microzig = .{
-            .path = "./microzig",
+            .path = "./deps/microzig",
+        },
+        .teensyduino = .{
+            .path = "./deps/teensyduino-lib",
         },
 
         // See `zig fetch --save <url>` for a command-line interface for adding dependencies.

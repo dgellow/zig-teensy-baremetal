@@ -27,4 +27,27 @@ pub fn build(b: *std.Build) void {
     exe.entry = .{ .symbol_name = "__ivt_start" };
 
     b.installArtifact(exe);
+
+    // Teensyduino library
+    // Note: macros and compiler flags based on deps/teensyduino-lib/teensy4/Makefile
+    exe_mod.addCMacro("__IMXRT1062__", "1");
+    exe_mod.addCMacro("ARDUINO_TEENSY41", "1");
+    exe_mod.addCMacro("ARDUINO", "10813");
+    exe_mod.addCMacro("TEENSYDUINO", "159");
+    exe_mod.addCMacro("USB_SERIAL", "1");
+    exe_mod.addCMacro("LAYOUT_US_ENGLISH", "1");
+
+    exe_mod.addIncludePath(b.path("deps/teensyduino-lib/teensy4"));
+
+    const c_sources = [_][]const u8{
+        "deps/teensyduino-lib/teensy4/keylayouts.c",
+        "deps/teensyduino-lib/teensy4/usb_desc.c",
+        "deps/teensyduino-lib/teensy4/usb_serial.c",
+        "deps/teensyduino-lib/teensy4/usb.c",
+    };
+    exe.addCSourceFiles(.{
+        .files = &c_sources,
+        .flags = &[_][]const u8{ "-std=gnu11", "-ffunction-sections", "-fdata-sections" },
+        .language = .c,
+    });
 }
