@@ -1,4 +1,5 @@
 const std = @import("std");
+const builtin = @import("builtin");
 
 pub fn build(b: *std.Build) void {
     const query = std.Target.Query{
@@ -28,6 +29,71 @@ pub fn build(b: *std.Build) void {
 
     b.installArtifact(exe);
 
+    // Teensy tools
+    var tools_step = b.step("tools", "Install teensy tools");
+    const tools_dep = b.dependency("teensy_tools", .{});
+    var tools_install_dir = if (builtin.os.tag == .windows)
+        b.addInstallDirectory(.{
+            .source_dir = tools_dep.path(""),
+            .install_dir = .bin,
+            .install_subdir = "tools",
+            .include_extensions = &[_][]const u8{ "exe", "bat" },
+        })
+    else
+        b.addInstallDirectory(.{
+            .source_dir = tools_dep.path(""),
+            .install_dir = .bin,
+            .install_subdir = "tools",
+        });
+
+    tools_step.dependOn(&tools_install_dir.step);
+    b.getInstallStep().dependOn(tools_step);
+
+    // Port command
+    const port_step = b.step("port", "Get teensy port");
+    port_step.dependOn(tools_step);
+
+    const tools_dir = b.getInstallPath(
+        tools_install_dir.options.install_dir,
+        tools_install_dir.options.install_subdir,
+    );
+    const teensy_ports_path = b.pathJoin(
+        &[_][]const u8{
+            tools_dir,
+            if (builtin.os.tag == .windows) "teensy_ports.exe" else "teensy_ports",
+        },
+    );
+
+    const port_run = b.addSystemCommand(&[_][]const u8{teensy_ports_path});
+    port_run.addArg("-L");
+    port_step.dependOn(&port_run.step);
+
+    // Upload command
+    const teensy_post_compile_path = b.pathJoin(
+        &[_][]const u8{
+            tools_dir,
+            if (builtin.os.tag == .windows) "teensy_post_compile.exe" else "teensy_post_compile",
+        },
+    );
+    const upload_run = b.addSystemCommand(&[_][]const u8{teensy_post_compile_path});
+
+    // FIXME: the teensy_zig.hex should be in the install directory, but currently it is build manually and located
+    // at the root
+    upload_run.addPrefixedDirectoryArg("-path=", b.path(""));
+    // FIXME: this should not be hardcoded
+    upload_run.addArg("-file=teensy_zig");
+    upload_run.addArg(b.fmt("-tools={s}", .{tools_dir}));
+    // FIXME: should be an option
+    upload_run.addArg("-reboot");
+    upload_run.addArg("-v");
+
+    const upload_step = b.step("upload", "Upload firmware to Teensy board");
+    upload_step.dependOn(&upload_run.step);
+    const upload_port_opton = b.option([]const u8, "upload-port", "USB port to upload to");
+    if (upload_port_opton) |port| {
+        upload_run.addArg(b.fmt("-port={s}", .{port}));
+    }
+
     // Teensyduino library
     // Note: macros and compiler flags based on deps/teensyduino-lib/teensy4/Makefile
     exe_mod.addCMacro("__IMXRT1062__", "1");
@@ -36,6 +102,7 @@ pub fn build(b: *std.Build) void {
     exe_mod.addCMacro("TEENSYDUINO", "159");
     exe_mod.addCMacro("USB_SERIAL", "1");
     exe_mod.addCMacro("LAYOUT_US_ENGLISH", "1");
+    exe_mod.addCMacro("NO_ARDUINO", "1");
 
     exe_mod.addIncludePath(b.path("deps/teensyduino-lib/teensy4"));
 
@@ -47,7 +114,16 @@ pub fn build(b: *std.Build) void {
     };
     exe.addCSourceFiles(.{
         .files = &c_sources,
-        .flags = &[_][]const u8{ "-std=gnu11", "-ffunction-sections", "-fdata-sections" },
+        .flags = &[_][]const u8{
+            "-std=gnu11",
+            "-ffunction-sections",
+            "-fdata-sections",
+            // CPU options
+            "-mcpu=cortex-m7",
+            "-mfloat-abi=hard",
+            "-mfpu=fpv5-d16",
+            "-mthumb",
+        },
         .language = .c,
     });
 }

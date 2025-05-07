@@ -12,7 +12,6 @@ break in future versions.
   - On Windows you can install it using `winget install Arm.GnuArmEmbeddedToolchain`. You may need to log out of your
     Windows session to have your `$env:Path` updated.
     Or run `$env:Path = "C:\Program Files (x86)\Arm GNU Toolchain arm-none-eabi\14.2 rel1\bin;$env:Path"` in your PowerShell session.
-- TyTools (optional, but recommended) for flashing the board, from https://koromix.dev/tytools
 
 ## Building
 
@@ -41,21 +40,19 @@ $ ./zig-out/bin/regz --output_path ../../../../src/imxrt1062.zig --format svd ..
 
 ## Flashing
 
-You can use TyTools to flash the generated IHEX file to the Teensy 4.1 board.
-
 ```sh
-$ tycmd list
-add 16740150-Teensy Teensy 4.1 (HalfKay)
-$ tycmd upload --board 16740150-Teensy teensy_zig.hex
-upload@16740150-Teensy  Uploading to board '16740150-Teensy' (Teensy 4.1)
-upload@16740150-Teensy  Firmware: teensy_zig.hex
-upload@16740150-Teensy  Flash usage: 6 kiB (0.1%)
-upload@16740150-Teensy  Uploading... 100%
-upload@16740150-Teensy  Sending reset command (with RTC)
-upload@16740150-Teensy  Board '16740150-Teensy' has disappeared
+# You can see the list of Teensy devices. Prints nothing if no board in bootloader mode is connected.
+$ zig build port
+usb:0/140000/0/A hid#vid_16c0&pid_0478 (Teensy 4.1) Bootloader
+
+# And upload the firmware to the Teensy device
+$ zig build upload # by default will try to select a board
+
+# You can also specify the port
+$ zig build upload -Dupload-port=usb:0/140000/0/A
 ```
 
 ---
 
 This repo has been originally based on https://github.com/tsunko/teensy-minimal-bare-metal-zig, and has been updated to
-work with the latest Zig compiler and `regz` tool.
+work with the latest Zig compiler, `regz` tool, a more comprehensive `build.zig` and examples.

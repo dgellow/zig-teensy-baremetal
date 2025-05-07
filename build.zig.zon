@@ -42,6 +42,10 @@
         .teensyduino = .{
             .path = "./deps/teensyduino-lib",
         },
+        .teensy_tools = .{
+            .url = "https://www.pjrc.com/teensy/td_156/teensy-tools-1.56.2-windows.tar.zst",
+            .hash = "N-V-__8AAL8-agCr8-T6PEpbjncxPhL0MMoiHxukqospUuFL",
+        },
 
         // See `zig fetch --save <url>` for a command-line interface for adding dependencies.
         //.example = .{
