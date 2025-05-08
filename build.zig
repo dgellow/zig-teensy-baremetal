@@ -9,6 +9,7 @@ pub fn build(b: *std.Build) void {
     };
 
     const target = b.resolveTargetQuery(query);
+    const optimize = b.standardOptimizeOption(.{});
 
     // Teensy compile
     const compile_dep = if (builtin.os.tag == .windows)
@@ -47,20 +48,57 @@ pub fn build(b: *std.Build) void {
     const exe_mod = b.createModule(.{
         .root_source_file = b.path("src/_startup.zig"),
         .target = target,
-        // Needed to disable compiler runtime, debug info, and others that are causing issues with lld
-        .optimize = .ReleaseSmall,
+        .optimize = optimize,
     });
 
     exe_mod.strip = false;
-    exe_mod.addSystemIncludePath(.{ .cwd_relative = b.pathJoin(&[_][]const u8{ arm_dir, "arm-none-eabi", "include" }) });
+    exe_mod.addSystemIncludePath(.{ .cwd_relative = b.pathJoin(&[_][]const u8{
+        arm_dir,
+        "arm-none-eabi",
+        "include",
+    }) });
+    exe_mod.addSystemIncludePath(.{ .cwd_relative = b.pathJoin(&[_][]const u8{
+        arm_dir,
+        "arm-none-eabi",
+        "include",
+        "c++",
+        "5.4.1",
+    }) });
+    exe_mod.addSystemIncludePath(.{ .cwd_relative = b.pathJoin(&[_][]const u8{
+        arm_dir,
+        "arm-none-eabi",
+        "include",
+        "c++",
+        "5.4.1",
+        "arm-none-eabi",
+    }) });
+    exe_mod.addLibraryPath(.{ .cwd_relative = b.pathJoin(&[_][]const u8{
+        arm_dir,
+        "arm-none-eabi",
+        "lib",
+    }) });
+    exe_mod.addLibraryPath(.{ .cwd_relative = b.pathJoin(&[_][]const u8{
+        arm_dir,
+        "arm-none-eabi",
+        "lib",
+        "armv7e-m",
+    }) });
+
+    exe_mod.linkSystemLibrary("arm_cortexM7lfsp_math", .{});
+    exe_mod.linkSystemLibrary("m", .{});
+    // exe_mod.linkSystemLibrary("c_nano", .{});
+    // exe_mod.linkSystemLibrary("stdc++", .{});
 
     const exe = b.addExecutable(.{
         .name = "teensy_zig",
         .root_module = exe_mod,
     });
+    // exe.link_gc_sections = true;
+    // exe.want_lto = false;
+    exe.entry = .{ .symbol_name = "ImageVectorTable" };
 
+    // exe.linkLibC();
     exe.setLinkerScript(b.path("linker_script.ld"));
-    exe.entry = .{ .symbol_name = "__ivt_start" };
     exe.step.dependOn(&compile_install_dir.step);
 
     b.installArtifact(exe);
@@ -153,6 +191,8 @@ pub fn build(b: *std.Build) void {
     exe_mod.addCMacro("ARDUINO", "10813");
     exe_mod.addCMacro("TEENSYDUINO", "159");
     exe_mod.addCMacro("USB_SERIAL", "1");
+    // exe_mod.addCMacro("CDC_STATUS_INTERFACE", "1");
+    // exe_mod.addCMacro("CDC_DATA_INTERFACE", "1");
     exe_mod.addCMacro("LAYOUT_US_ENGLISH", "1");
     exe_mod.addCMacro("NO_ARDUINO", "1");
 
@@ -163,6 +203,9 @@ pub fn build(b: *std.Build) void {
         "deps/teensyduino-lib/teensy4/usb_desc.c",
         "deps/teensyduino-lib/teensy4/usb_serial.c",
         "deps/teensyduino-lib/teensy4/usb.c",
+        "deps/teensyduino-lib/teensy4/delay.c",
+        // "deps/teensyduino-lib/teensy4/nonstd.c",
+        // "deps/teensyduino-lib/teensy4/startup.c",
     };
     exe.addCSourceFiles(.{
         .files = &c_sources,
@@ -170,6 +213,9 @@ pub fn build(b: *std.Build) void {
             "-std=gnu11",
             "-ffunction-sections",
             "-fdata-sections",
+            "-fno-exceptions",
+            "-fno-unwind-tables",
+            "-fno-asynchronous-unwind-tables",
             // CPU options
             "-mcpu=cortex-m7",
             "-mfloat-abi=hard",
@@ -178,4 +224,27 @@ pub fn build(b: *std.Build) void {
         },
         .language = .c,
     });
+
+    // const cpp_sources = [_][]const u8{
+    //     "deps/teensyduino-lib/teensy4/yield.cpp",
+    // };
+    // exe.addCSourceFiles(.{
+    //     .files = &cpp_sources,
+    //     .flags = &[_][]const u8{
+    //         "-std=gnu++17",
+    //         "-felide-constructors",
+    //         "-fno-exceptions",
+    //         "-fpermissive",
+    //         "-fno-rtti",
+    //         "-Wno-error=narrowing",
+    //         "-ffunction-sections",
+    //         "-fdata-sections",
+    //         // CPU options
+    //         "-mcpu=cortex-m7",
+    //         "-mfloat-abi=hard",
+    //         "-mfpu=fpv5-d16",
+    //         "-mthumb",
+    //     },
+    //     .language = .cpp,
+    // });
 }

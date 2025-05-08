@@ -6,6 +6,12 @@ const c = @cImport({
 });
 
 pub export fn main() void {
+    // c.usb_serial_configure();
+    // busyDelay(100_000_000);
+
+    // _ = c.usb_serial_write("Hello from Teensy 4.1!\n", 24);
+    // _ = c.usb_serial_write_buffer_free();
+
     // Configure B0_03 (PIN #13) for output
     peripherals.IOMUXC.SW_MUX_CTL_PAD_GPIO_B0_03.modify(.{
         .MUX_MODE = .ALT5, // set to GPIO
