@@ -12,4 +12,4 @@ echo "Initializing git submodules..."
 git submodule update --init
 
 echo "Fetching zig dependencies..."
-zig build --fetch || zig fetch --save || true
+zig build --fetch
