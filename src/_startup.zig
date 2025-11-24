@@ -366,8 +366,9 @@ export fn unused_interrupt_vector() callconv(.C) void {
     while (true) {} // Trap
 }
 
-// Vector table declaration
-pub export var _VectorsRam: [NVIC_NUM_INTERRUPTS + 16]?*const fn () callconv(.C) void = undefined;
+// Vector table declaration - initialized with default handler
+pub export var _VectorsRam: [NVIC_NUM_INTERRUPTS + 16]?*const fn () callconv(.C) void =
+    [_]?*const fn() callconv(.C) void{unused_interrupt_vector} ** (NVIC_NUM_INTERRUPTS + 16);
 
 // External variables from linker script
 extern var _flexram_bank_config: u32;
@@ -398,10 +399,20 @@ pub export fn ImageVectorTable() linksection(".flashmem") callconv(.C) void {
     __bootdata[1] = 0; // FLASH size - filled at runtime
     __bootdata[2] = 0; // Plugin flag
 
-    // Configure FlexRAM - essential for i.MX RT1062
-    peripherals.IOMUXC_GPR.GPR17.raw = @intCast(@intFromPtr(&_flexram_bank_config));
+    // Configure FlexRAM: 128KB ITCM + 128KB DTCM + 256KB OCRAM
+    // GPR17: Bank configuration (2 bits per 32KB bank)
+    // Banks 0-3: ITCM (0b11), Banks 4-7: DTCM (0b10), Banks 8-15: OCRAM (0b01)
+    peripherals.IOMUXC_GPR.GPR17.raw = _flexram_bank_config;
+
+    // GPR16: Enable FlexRAM bank config from GPR17
+    // Bit 2: FLEXRAM_BANK_CFG_SEL = 1 (use GPR17)
+    // Bits 0-1: Keep TCMs enabled
     peripherals.IOMUXC_GPR.GPR16.raw = 0x00000007;
-    peripherals.IOMUXC_GPR.GPR14.raw = 0x00AA0000;
+
+    // GPR14: Set TCM sizes
+    // CM7_CFGITCMSZ (bits 16-19): 0x7 = 128KB
+    // CM7_CFGDTCMSZ (bits 20-23): 0x7 = 128KB
+    peripherals.IOMUXC_GPR.GPR14.raw = 0x00770000;
 
     // Set up stack pointer - must happen early!
     asm volatile ("mov sp, %[arg1]"
